@@ -8,6 +8,7 @@ import WebKit
 class ViewController: UIViewController, WKNavigationDelegate {
     var webView: WKWebView!
     var progressView: UIProgressView!
+    var websites = ["apple.com", "hackingwithswift.com"]
     
     override func loadView(){
         webView = WKWebView()
@@ -18,7 +19,7 @@ class ViewController: UIViewController, WKNavigationDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let url = URL(string: "https://www.hackingwithswift.com")!
+        let url = URL(string: "https://" + websites[0])!
         webView.load(URLRequest(url: url))
         
         
@@ -26,25 +27,18 @@ class ViewController: UIViewController, WKNavigationDelegate {
         progressView.sizeToFit()
         webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
         
+        
         let spacer = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let refresh = UIBarButtonItem(barButtonSystemItem: .refresh, target: webView, action: #selector(webView.reload))
-        let progress = UIBarButtonItem(customView: progressView)
-        let favorites = UIBarButtonItem(title: "Favorites", style: .plain, target: self, action: #selector(openTapped))
+        let refreshButton = UIBarButtonItem(barButtonSystemItem: .refresh, target: webView, action: #selector(webView.reload))
+        let progressButton = UIBarButtonItem(customView: progressView)
+        let favoritesButton = UIBarButtonItem(title: "Favorites", style: .plain, target: self, action: #selector(openTapped))
         
         
+        navigationItem.leftBarButtonItem = progressButton
+        navigationItem.rightBarButtonItem = refreshButton
+        toolbarItems = [spacer, favoritesButton]
         
-        
-        
-        
-        
-        navigationItem.leftBarButtonItem = progress
-        navigationItem.rightBarButtonItem = refresh
-        
-        toolbarItems = [spacer, favorites]
-        
-//        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: webView, action: #selector(webView.reload))
-        
-        //toolbarItems = [ spacer, refresh]
+
         webView.allowsBackForwardNavigationGestures = true
         navigationController?.isToolbarHidden = false
         
@@ -65,20 +59,44 @@ class ViewController: UIViewController, WKNavigationDelegate {
     @objc func openTapped(){
         let alertController = UIAlertController(title: "Open page...", message: nil, preferredStyle: .actionSheet)
         
-        alertController.addAction(UIAlertAction(title: "apple.com", style: .default, handler: openPage))
-        alertController.addAction(UIAlertAction(title: "hackingwithswift.com", style: .default, handler: openPage))
+        for website in websites {
+            alertController.addAction(UIAlertAction(title: website, style: .default, handler: openPage))
+        }
+//        alertController.addAction(UIAlertAction(title: "apple.com", style: .default, handler: openPage))
+//        alertController.addAction(UIAlertAction(title: "hackingwithswift.com", style: .default, handler: openPage))
         
         alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
         alertController.popoverPresentationController?.barButtonItem = self.navigationItem.rightBarButtonItem
         present(alertController, animated: true)
     }
+    
+
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "estimatedProgress"{
             progressView.progress = Float(webView.estimatedProgress)
         }
     }
     
-
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        let url = navigationAction.request.url
+        
+        if let host = url?.host{
+            for website in websites {
+                if host.contains(website){
+                    decisionHandler(.allow)
+                    print("allow")
+                    return
+                }
+            }
+        }
+        print("cancel")
+        decisionHandler(.cancel)
+    }
+    
+    
+    deinit {
+        webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
+    }
 }
 
